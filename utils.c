@@ -418,7 +418,8 @@ is_playlist(const char * file)
 int
 is_caption(const char * file)
 {
-	return (ends_with(file, ".srt") || ends_with(file, ".smi"));
+	return (ends_with(file, ".srt") || ends_with(file, ".smi") ||
+			ends_with(file, ".ssa") || ends_with(file, ".ass"));
 }
 
 int

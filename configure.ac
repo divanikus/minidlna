@@ -383,6 +383,12 @@ AC_COMPILE_IFELSE(
      ])
 CFLAGS="$CFLAGS_SAVE"
 
+if test -n "$CYGWIN_OS"; then
+    AC_CHECK_LIB([z], [gzopen], [], [])
+    AC_CHECK_LIB([bz2], [BZ2_bzopen], [], [])
+    LIBS="-lavcodec -lavutil $LIBICONV $LIBINTL $LIBS"
+fi
+
 LDFLAGS_SAVE="$LDFLAGS"
 for dir in "" /usr/local $SEARCH_DIR; do
     if test -n "$dir"; then
@@ -591,6 +597,7 @@ AC_ARG_ENABLE(readynas,
 )
 
 AC_MSG_CHECKING([whether to build a static binary executable])
+if test -z "$CYGWIN_OS"; then
 AC_ARG_ENABLE(static,
 	[  --enable-static         build a static binary executable],[
 	if test "$enableval" = "yes"; then
@@ -606,6 +613,23 @@ AC_ARG_ENABLE(static,
                 AC_MSG_RESULT([no])
         ]
 )
+else
+AC_ARG_ENABLE(static,
+	[  --disable-static        build a dynamically linked binary executable for CYGWIN],,
+)
+
+AS_IF([test "x$enable_static" != xno],
+    [
+		STATIC_CFLAGS="-DSTATIC"
+		AC_SUBST(STATIC_CFLAGS)
+		STATIC_LDFLAGS="-Wl,-static -static-libgcc"
+		AC_SUBST(STATIC_LDFLAGS)
+		AC_MSG_RESULT([yes])
+	],[
+		AC_MSG_RESULT([no])
+	]
+)
+fi
 
 
 case "$target_os" in
@@ -628,6 +652,13 @@ case "$target_os" in
         openbsd*)
                 OS_URL=http://www.openbsd.org/
                 ;;
+        cygwin*)
+                OS_URL=http://www.cygwin.com/
+                AC_DEFINE(HAVE_INOTIFY, [1], [support inotify equivalent function on Cygwin])
+				if test "$target_cpu" != "x86_64"; then
+					LIBS="$LIBS -lws2_32 -liphlpapi"
+				fi
+		;;
         *)
                 echo "Unknown OS : $target_os"
                 ;;

@@ -117,7 +117,11 @@ OpenAndConfSSDPReceiveSocket(void)
 	 * to receive datagramms send to this multicast address.
 	 * To specify the local nics we want to use we have to use setsockopt,
 	 * see AddMulticastMembership(...). */
+#ifdef __CYGWIN__
+	sockname.sin_addr.s_addr = htonl(INADDR_ANY);
+#else
 	sockname.sin_addr.s_addr = inet_addr(SSDP_MCAST_ADDR);
+#endif
 
 	if (bind(s, (struct sockaddr *)&sockname, sizeof(struct sockaddr_in)) < 0)
 	{

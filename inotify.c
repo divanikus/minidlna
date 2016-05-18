@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <signal.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -338,6 +339,7 @@ inotify_insert_file(char * name, const char * path)
 			if( !is_audio(path) &&
 			    !is_video(path) &&
 			    !is_playlist(path) )
+				return -1;
 			break;
 		case TYPE_AUDIO|TYPE_IMAGES:
 			if( !is_image(path) &&
@@ -358,9 +360,8 @@ inotify_insert_file(char * name, const char * path)
 			if( !is_image(path) )
 				return -1;
 			break;
-                default:
+		default:
 			return -1;
-			break;
 	}
 	
 	/* If it's already in the database and hasn't been modified, skip it. */
@@ -673,7 +674,7 @@ inotify_remove_directory(int fd, const char * path)
 
 #ifndef __CYGWIN__
 void *
-start_inotify()
+start_inotify(void)
 {
 	struct pollfd pollfds[1];
 	int timeout = 1000;
@@ -682,6 +683,10 @@ start_inotify()
 	int length, i = 0;
 	char * esc_name = NULL;
 	struct stat st;
+	sigset_t set;
+
+	sigfillset(&set);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
         
 	pollfds[0].fd = inotify_init();
 	pollfds[0].events = POLLIN;
@@ -748,9 +753,10 @@ start_inotify()
 				else if ( (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE)) &&
 				          (lstat(path_buf, &st) == 0) )
 				{
-					if( S_ISLNK(st.st_mode) )
+					if( (event->mask & (IN_MOVED_TO|IN_CREATE)) && (S_ISLNK(st.st_mode) || st.st_nlink > 1) )
 					{
-						DPRINTF(E_DEBUG, L_INOTIFY, "The symbolic link %s was %s.\n",
+						DPRINTF(E_DEBUG, L_INOTIFY, "The %s link %s was %s.\n",
+							(S_ISLNK(st.st_mode) ? "symbolic" : "hard"),
 							path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
 						if( stat(path_buf, &st) == 0 && S_ISDIR(st.st_mode) )
 							inotify_insert_directory(pollfds[0].fd, esc_name, path_buf);

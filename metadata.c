@@ -159,7 +159,7 @@ check_for_captions(const char *path, int64_t detailID)
 
 	if (ret == 0)
 	{
-		sql_exec(db, "INSERT into CAPTIONS"
+		sql_exec(db, "INSERT OR REPLACE into CAPTIONS"
 		             " (ID, PATH) "
 		             "VALUES"
 		             " (%lld, %Q)", detailID, file);
@@ -194,16 +194,16 @@ parse_nfo(const char *path, metadata_t *m)
 	val = GetValueFromNameValueList(&xml, "title");
 	if( val )
 	{
-		char *esc_tag = unescape_tag(val, 1);
+		char *esc_tag, *title;
 		val2 = GetValueFromNameValueList(&xml, "episodetitle");
-		if( val2 ) {
-			char *esc_tag2 = unescape_tag(val2, 1);
-			xasprintf(&m->title, "%s - %s", esc_tag, esc_tag2);
-			free(esc_tag2);
-		} else {
-			m->title = escape_tag(esc_tag, 1);
-		}
+		if( val2 )
+			xasprintf(&title, "%s - %s", val, val2);
+		else
+			title = strdup(val);
+		esc_tag = unescape_tag(title, 1);
+		m->title = escape_tag(esc_tag, 1);
 		free(esc_tag);
+		free(title);
 	}
 
 	val = GetValueFromNameValueList(&xml, "plot");
@@ -416,7 +416,7 @@ GetAudioMetadata(const char *path, char *name)
 	{
 		for( i = ROLE_ALBUMARTIST; i <= ROLE_BAND; i++ )
 		{
-	        	if( song.contributor[i] && *song.contributor[i] )
+			if( song.contributor[i] && *song.contributor[i] )
 				break;
 		}
 	        if( i <= ROLE_BAND )
@@ -704,16 +704,16 @@ GetVideoMetadata(const char *path, char *name)
 	//dump_format(ctx, 0, NULL, 0);
 	for( i=0; i<ctx->nb_streams; i++)
 	{
-		if( audio_stream == -1 &&
-		    ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO )
+		if( ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO &&
+		    audio_stream == -1 )
 		{
 			audio_stream = i;
 			ac = ctx->streams[audio_stream]->codec;
 			continue;
 		}
-		else if( video_stream == -1 &&
+		else if( ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
 		         !lav_is_thumbnail_stream(ctx->streams[i], &m.thumb_data, &m.thumb_size) &&
-			 ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
+		         video_stream == -1 )
 		{
 			video_stream = i;
 			vc = ctx->streams[video_stream]->codec;

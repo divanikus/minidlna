@@ -103,7 +103,7 @@
 # warning "Your SQLite3 library appears to be too old!  Please use 3.5.1 or newer."
 # define sqlite3_threadsafe() 0
 #endif
- 
+
 /* OpenAndConfHTTPSocket() :
  * setup the socket used to handle incoming HTTP connections. */
 static int
@@ -148,7 +148,7 @@ OpenAndConfHTTPSocket(unsigned short port)
 	return s;
 }
 
-/* Handler for the SIGTERM signal (kill) 
+/* Handler for the SIGTERM signal (kill)
  * SIGINT is also handled */
 static void
 sigterm(int sig)
@@ -335,7 +335,7 @@ delete_db_cygwin(char *db_path)
 	if (SHFileOperationA(&file_op) != 0)
 		DPRINTF(E_ERROR, L_GENERAL, "cannot delete \"art_cache\"\n");
 	return;
-} 
+}
 
 static char optionsfile_cygwin[PATH_MAX] = {'\0'};
 static char pidfilename_cygwin[PATH_MAX] = {'\0'};
@@ -441,6 +441,7 @@ rescan:
 			sqlite3_close(db);
 			log_close();
 			freeoptions();
+			free(children);
 			exit(EXIT_SUCCESS);
 		}
 		else if (*scanner_pid < 0)
@@ -491,7 +492,7 @@ writepidfile(const char *fname, int pid, uid_t uid)
 					dir, strerror(errno));
 		}
 	}
-	
+
 	pidfile = fopen(fname, "w");
 	if (!pidfile)
 	{
@@ -502,7 +503,7 @@ writepidfile(const char *fname, int pid, uid_t uid)
 
 	if (fprintf(pidfile, "%d\n", pid) <= 0)
 	{
-		DPRINTF(E_ERROR, L_GENERAL, 
+		DPRINTF(E_ERROR, L_GENERAL,
 			"Unable to write to pidfile %s: %s\n", fname, strerror(errno));
 		ret = -1;
 	}
@@ -528,20 +529,32 @@ static int strtobool(const char *str)
 static void init_nls(void)
 {
 #ifdef ENABLE_NLS
-	setlocale(LC_MESSAGES, "");
-	setlocale(LC_CTYPE, "en_US.utf8");
+	const char *messages, *ctype, *locale_dir;
+
+	ctype = setlocale(LC_CTYPE, "");
+	if (!ctype || !strcmp(ctype, "C"))
+		ctype = setlocale(LC_CTYPE, "en_US.utf8");
+	if (!ctype)
+		DPRINTF(E_WARN, L_GENERAL, "Unset locale\n");
+	else if (!strstr(ctype, "utf8") && !strstr(ctype, "UTF8") &&
+		 !strstr(ctype, "utf-8") && !strstr(ctype, "UTF-8"))
+		DPRINTF(E_WARN, L_GENERAL, "Using unsupported non-utf8 locale '%s'\n", ctype);
+	messages = setlocale(LC_MESSAGES, "");
+	if (!messages)
+		messages = "unset";
 #ifndef __CYGWIN__
-	DPRINTF(E_DEBUG, L_GENERAL, "Using locale dir %s\n", bindtextdomain("minidlna", getenv("TEXTDOMAINDIR")));
+	locale_dir = bindtextdomain("minidlna", getenv("TEXTDOMAINDIR"));
+	DPRINTF(E_DEBUG, L_GENERAL, "Using locale dir '%s' and locale langauge %s/%s\n", locale_dir, messages, ctype);
 #else // __CYGWIN__
-	{
-		char *textdomaindir, *path=db_path, conv_path[PATH_MAX];
-		if ((textdomaindir = getenv("TEXTDOMAINDIR")) != NULL)
-		{
-			realpath_conv_path(textdomaindir, conv_path);
-			path = conv_path;
-		}
-		fprintf(stderr, "Using locale dir %s\n", bindtextdomain("minidlna", path));
-	}
+{
+  char *textdomaindir, *path=db_path, conv_path[PATH_MAX];
+  if ((textdomaindir = getenv("TEXTDOMAINDIR")) != NULL)
+  {
+    realpath_conv_path(textdomaindir, conv_path);
+    path = conv_path;
+  }
+  fprintf(stderr, "Using locale dir %s\n", bindtextdomain("minidlna", path));
+}
 #endif //  __CYGWIN__
 	textdomain("minidlna");
 #endif
@@ -602,7 +615,7 @@ init(int argc, char **argv)
 	strncat(uuidvalue, mac_str, 12);
 
 	getfriendlyname(friendly_name, FRIENDLYNAME_MAX_LEN);
-	
+
 	runtime_vars.port = 8200;
 	runtime_vars.notify_interval = 895;	/* seconds between SSDP announces */
 	runtime_vars.max_connections = 50;
@@ -631,6 +644,8 @@ init(int argc, char **argv)
 						MAX_LAN_ADDR, word);
 					break;
 				}
+				while (isspace(*word))
+					word++;
 				runtime_vars.ifaces[ifaces++] = word;
 			}
 			break;
@@ -645,7 +660,7 @@ init(int argc, char **argv)
 			break;
 		case UPNPSERIAL:
 			strncpyt(serialnumber, ary_options[i].value, SERIALNUMBER_MAX_LEN);
-			break;				
+			break;
 		case UPNPMODEL_NAME:
 			strncpyt(modelname, ary_options[i].value, MODELNAME_MAX_LEN);
 			break;
@@ -812,7 +827,8 @@ init(int argc, char **argv)
 				/* Symbolic username given, not UID. */
 				struct passwd *entry = getpwnam(ary_options[i].value);
 				if (!entry)
-					DPRINTF(E_FATAL, L_GENERAL, "Bad user '%s'.\n", argv[i]);
+					DPRINTF(E_FATAL, L_GENERAL, "Bad user '%s'.\n",
+						ary_options[i].value);
 				uid = entry->pw_uid;
 			}
 			break;
@@ -825,6 +841,10 @@ init(int argc, char **argv)
 		case MERGE_MEDIA_DIRS:
 			if (strtobool(ary_options[i].value))
 				SETFLAG(MERGE_MEDIA_DIRS_MASK);
+			break;
+		case WIDE_LINKS:
+			if (strtobool(ary_options[i].value))
+				SETFLAG(WIDE_LINKS_MASK);
 			break;
 		default:
 			DPRINTF(E_ERROR, L_GENERAL, "Unknown option in file %s\n",
@@ -1034,7 +1054,7 @@ init(int argc, char **argv)
 	{
 		DPRINTF(E_ERROR, L_GENERAL, SERVER_NAME " is already running. EXITING.\n");
 		return 1;
-	}	
+	}
 
 	set_startup_time();
 
@@ -1130,11 +1150,10 @@ main(int argc, char **argv)
 	}
 #endif // __CYGWIN__
 
-	init_nls();
-
 	ret = init(argc, argv);
 	if (ret != 0)
 		return 1;
+	init_nls();
 
 	DPRINTF(E_WARN, L_GENERAL, "Starting " SERVER_NAME " version " MINIDLNA_VERSION ".\n");
 	if (sqlite3_libversion_number() < 3005001)
@@ -1172,6 +1191,7 @@ main(int argc, char **argv)
 	if (sssdp < 0)
 	{
 		DPRINTF(E_INFO, L_GENERAL, "Failed to open socket for receiving SSDP. Trying to use MiniSSDPd\n");
+		reload_ifaces(0);	/* populate lan_addr[0].str */
 		if (SubmitServicesToMiniSSDPD(lan_addr[0].str, runtime_vars.port) < 0)
 			DPRINTF(E_FATAL, L_GENERAL, "Failed to connect to MiniSSDPd. EXITING");
 	}
@@ -1277,25 +1297,25 @@ main(int argc, char **argv)
 		/* select open sockets (SSDP, HTTP listen, and all HTTP soap sockets) */
 		FD_ZERO(&readset);
 
-		if (sssdp >= 0) 
+		if (sssdp >= 0)
 		{
 			FD_SET(sssdp, &readset);
 			max_fd = MAX(max_fd, sssdp);
 		}
-		
-		if (shttpl >= 0) 
+
+		if (shttpl >= 0)
 		{
 			FD_SET(shttpl, &readset);
 			max_fd = MAX(max_fd, shttpl);
 		}
 #ifdef TIVO_SUPPORT
-		if (sbeacon >= 0) 
+		if (sbeacon >= 0)
 		{
 			FD_SET(sbeacon, &readset);
 			max_fd = MAX(max_fd, sbeacon);
 		}
 #endif
-		if (smonitor >= 0) 
+		if (smonitor >= 0)
 		{
 			FD_SET(smonitor, &readset);
 			max_fd = MAX(max_fd, smonitor);
@@ -1419,10 +1439,6 @@ shutdown:
 	if (scanning && scanner_pid)
 		kill(scanner_pid, SIGKILL);
 
-	/* kill other child processes */
-	process_reap_children();
-	free(children);
-
 	/* close out open sockets */
 	while (upnphttphead.lh_first != NULL)
 	{
@@ -1438,7 +1454,9 @@ shutdown:
 	if (sbeacon >= 0)
 		close(sbeacon);
 #endif
-	
+	if (smonitor >= 0)
+		close(smonitor);
+
 	for (i = 0; i < n_lan_addr; i++)
 	{
 		SendSSDPGoodbyes(lan_addr[i].snotify);
@@ -1447,6 +1465,10 @@ shutdown:
 
 	if (inotify_thread)
 		pthread_join(inotify_thread, NULL);
+
+	/* kill other child processes */
+	process_reap_children();
+	free(children);
 
 	sql_exec(db, "UPDATE SETTINGS set VALUE = '%u' where KEY = 'UPDATE_ID'", updateID);
 	sqlite3_close(db);
@@ -1461,4 +1483,3 @@ shutdown:
 
 	exit(EXIT_SUCCESS);
 }
-

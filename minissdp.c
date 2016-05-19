@@ -88,7 +88,7 @@ AddMulticastMembership(int s, struct lan_addr_s *iface)
 	return 0;
 }
 
-/* Open and configure the socket listening for 
+/* Open and configure the socket listening for
  * SSDP udp packets sent on 239.255.255.250 port 1900 */
 int
 OpenAndConfSSDPReceiveSocket(void)
@@ -96,13 +96,13 @@ OpenAndConfSSDPReceiveSocket(void)
 	int s;
 	int i = 1;
 	struct sockaddr_in sockname;
-	
+
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0)
 	{
 		DPRINTF(E_ERROR, L_SSDP, "socket(udp): %s\n", strerror(errno));
 		return -1;
-	}	
+	}
 
 	if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i)) < 0)
 		DPRINTF(E_WARN, L_SSDP, "setsockopt(udp, SO_REUSEADDR): %s\n", strerror(errno));
@@ -118,6 +118,25 @@ OpenAndConfSSDPReceiveSocket(void)
 	 * To specify the local nics we want to use we have to use setsockopt,
 	 * see AddMulticastMembership(...). */
 #ifdef __CYGWIN__
+	{
+		int ret;
+		struct ip_mreq imr;	/* Ip multicast membership */
+		/* setting up imr structure */
+		memset(&imr, '\0', sizeof(imr));
+		imr.imr_multiaddr.s_addr = inet_addr(SSDP_MCAST_ADDR);
+		imr.imr_interface.s_addr = htonl(INADDR_ANY);
+		/* Setting the socket options will guarantee, tha we will only receive
+		 * multicast traffic on a specific Interface.
+		 * In addition the kernel is instructed to send an igmp message (choose
+		 * mcast group) on the specific interface/subnet. */
+		ret = setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *)&imr, sizeof(imr));
+		if (ret < 0 && errno != EADDRINUSE)
+		{
+			DPRINTF(E_ERROR, L_SSDP, "setsockopt(udp, IP_ADD_MEMBERSHIP): %s\n",
+				strerror(errno));
+			DPRINTF(E_WARN, L_SSDP, "Failed to add multicast membership for address 0.0.0.0\n");
+		}
+	}
 	sockname.sin_addr.s_addr = htonl(INADDR_ANY);
 #else
 	sockname.sin_addr.s_addr = inet_addr(SSDP_MCAST_ADDR);
@@ -144,7 +163,7 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 	uint8_t ttl = 4;
 	struct in_addr mc_if;
 	struct sockaddr_in sockname;
-	
+
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0)
 	{
@@ -169,7 +188,7 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 	}
 
 	setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
-	
+
 	if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &bcast, sizeof(bcast)) < 0)
 	{
 		DPRINTF(E_ERROR, L_SSDP, "setsockopt(udp_notify, SO_BROADCAST): %s\n", strerror(errno));
@@ -190,10 +209,9 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 
 	if (AddMulticastMembership(sssdp, iface) < 0)
 	{
-		DPRINTF(E_WARN, L_SSDP, "Failed to add multicast membership for address %s\n", 
+		DPRINTF(E_WARN, L_SSDP, "Failed to add multicast membership for address %s\n",
 			iface->str);
 	}
-
 	return s;
 }
 
@@ -234,7 +252,7 @@ SendSSDPResponse(int s, struct sockaddr_in sockname, int st_no,
 	 * uppercase is recommended.
 	 * DATE: is recommended
 	 * SERVER: OS/ver UPnP/1.0 minidlna/1.0
-	 * - check what to put in the 'Cache-Control' header 
+	 * - check what to put in the 'Cache-Control' header
 	 * */
 	strftime(tmstr, sizeof(tmstr), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&tm));
 	l = snprintf(buf, sizeof(buf), "HTTP/1.1 200 OK\r\n"
@@ -287,7 +305,7 @@ SendSSDPNotifies(int s, const char *host, unsigned short port,
 		i = 0;
 		while (known_service_types[i])
 		{
-			l = snprintf(bufr, sizeof(bufr), 
+			l = snprintf(bufr, sizeof(bufr),
 					"NOTIFY * HTTP/1.1\r\n"
 					"HOST:%s:%d\r\n"
 					"CACHE-CONTROL:max-age=%u\r\n"
@@ -760,7 +778,7 @@ ProcessSSDPRequest(int s, unsigned short port)
 	}
 }
 
-/* This will broadcast ssdp:byebye notifications to inform 
+/* This will broadcast ssdp:byebye notifications to inform
  * the network that UPnP is going down. */
 int
 SendSSDPGoodbyes(int s)
@@ -847,7 +865,7 @@ SubmitServicesToMiniSSDPD(const char *host, unsigned short port)
 		if (i > 0)
 			p[l-1] = '1';
 		p += l;
-		l = snprintf(strbuf, sizeof(strbuf), "%s::%s%s", 
+		l = snprintf(strbuf, sizeof(strbuf), "%s::%s%s",
 		             uuidvalue, known_service_types[i], (i==0)?"":"1");
 		CODELENGTH(l, p);
 		memcpy(p, strbuf, l);
@@ -871,4 +889,3 @@ SubmitServicesToMiniSSDPD(const char *host, unsigned short port)
 	close(s);
 	return 0;
 }
-

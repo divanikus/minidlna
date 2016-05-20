@@ -206,12 +206,13 @@ OpenAndConfSSDPNotifySocket(struct lan_addr_s *iface)
 		close(s);
 		return -1;
 	}
-
+#ifndef __CYGWIN__
 	if (AddMulticastMembership(sssdp, iface) < 0)
 	{
 		DPRINTF(E_WARN, L_SSDP, "Failed to add multicast membership for address %s\n",
 			iface->str);
 	}
+#endif
 	return s;
 }
 

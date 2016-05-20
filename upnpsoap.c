@@ -824,7 +824,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 		{
 			unsigned int track_no;
 			track_no = strtoul(track, NULL, 0);
-			if( GETFLAG(PREPEND_DISC_MASK) && NON_ZERO(disc) ) 
+			if( GETFLAG(PREPEND_DISC_MASK) && NON_ZERO(disc) )
 			{
 				unsigned int disc_no;
 				disc_no = strtoul(disc, NULL, 0);
@@ -1131,6 +1131,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 			}
 		}
 		ret = strcatf(str, "&lt;/item&gt;");
+		free(prep_title);
 	}
 	else if( strncmp(class, "container", 9) == 0 )
 	{

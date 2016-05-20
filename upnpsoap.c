@@ -84,7 +84,7 @@
  * --------	---------------- -----------
  * 401 		Invalid Action 	No action by that name at this service.
  * 402 		Invalid Args 	Could be any of the following: not enough in args,
- * 							too many in args, no in arg by that name, 
+ * 							too many in args, no in arg by that name,
  * 							one or more in args are of the wrong data type.
  * 403 		Out of Sync 	Out of synchronization.
  * 501 		Action Failed 	May be returned in current state of service
@@ -93,13 +93,13 @@
  * 							Technical Committee.
  * 700-799 	TBD 			Action-specific errors for standard actions.
  * 							Defined by UPnP Forum working committee.
- * 800-899 	TBD 			Action-specific errors for non-standard actions. 
+ * 800-899 	TBD 			Action-specific errors for non-standard actions.
  * 							Defined by UPnP vendor.
 */
 static void
 SoapError(struct upnphttp * h, int errCode, const char * errDesc)
 {
-	static const char resp[] = 
+	static const char resp[] =
 		"<s:Envelope "
 		"xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
 		"s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
@@ -201,13 +201,13 @@ IsAuthorizedValidated(struct upnphttp * h, const char * action)
 		int bodylen;
 		bodylen = snprintf(body, sizeof(body), resp,
 			action, "urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1",
-			1, action);	
+			1, action);
 		BuildSendAndCloseSoapResp(h, body, bodylen);
 	}
 	else
 		SoapError(h, 402, "Invalid Args");
 
-	ClearNameValueList(&data);	
+	ClearNameValueList(&data);
 }
 
 static void
@@ -245,7 +245,7 @@ GetProtocolInfo(struct upnphttp * h, const char * action)
 
 	bodylen = asprintf(&body, resp,
 		action, "urn:schemas-upnp-org:service:ConnectionManager:1",
-		action);	
+		action);
 	BuildSendAndCloseSoapResp(h, body, bodylen);
 	free(body);
 }
@@ -270,7 +270,7 @@ GetSortCapabilities(struct upnphttp * h, const char * action)
 
 	bodylen = snprintf(body, sizeof(body), resp,
 		action, "urn:schemas-upnp-org:service:ContentDirectory:1",
-		action);	
+		action);
 	BuildSendAndCloseSoapResp(h, body, bodylen);
 }
 
@@ -299,7 +299,7 @@ GetSearchCapabilities(struct upnphttp * h, const char * action)
 
 	bodylen = snprintf(body, sizeof(body), resp,
 		action, "urn:schemas-upnp-org:service:ContentDirectory:1",
-		action);	
+		action);
 	BuildSendAndCloseSoapResp(h, body, bodylen);
 }
 
@@ -318,7 +318,7 @@ GetCurrentConnectionIDs(struct upnphttp * h, const char * action)
 
 	bodylen = snprintf(body, sizeof(body), resp,
 		action, "urn:schemas-upnp-org:service:ConnectionManager:1",
-		action);	
+		action);
 	BuildSendAndCloseSoapResp(h, body, bodylen);
 }
 
@@ -362,10 +362,10 @@ GetCurrentConnectionInfo(struct upnphttp * h, const char * action)
 		int bodylen;
 		bodylen = snprintf(body, sizeof(body), resp,
 			action, "urn:schemas-upnp-org:service:ConnectionManager:1",
-			action);	
+			action);
 		BuildSendAndCloseSoapResp(h, body, bodylen);
 	}
-	ClearNameValueList(&data);	
+	ClearNameValueList(&data);
 }
 
 /* Standard DLNA/UPnP filter flags */
@@ -777,7 +777,7 @@ callback(void *args, int argc, char **argv, char **azColName)
 	char *id = argv[0], *parent = argv[1], *refID = argv[2], *detailID = argv[3], *class = argv[4], *size = argv[5], *title = argv[6],
 	     *duration = argv[7], *bitrate = argv[8], *sampleFrequency = argv[9], *artist = argv[10], *album = argv[11],
 	     *genre = argv[12], *comment = argv[13], *nrAudioChannels = argv[14], *track = argv[15], *date = argv[16], *resolution = argv[17],
-	     *tn = argv[18], *creator = argv[19], *dlna_pn = argv[20], *mime = argv[21], *album_art = argv[22], *rotate = argv[23];
+	     *tn = argv[18], *creator = argv[19], *dlna_pn = argv[20], *mime = argv[21], *album_art = argv[22], *rotate = argv[23], *disc = argv[24];
 	char dlna_buf[128];
 	const char *ext;
 	struct string_s *str = passed_args->str;
@@ -818,6 +818,26 @@ callback(void *args, int argc, char **argv, char **azColName)
 	{
 		uint32_t dlna_flags = DLNA_FLAG_DLNA_V1_5|DLNA_FLAG_HTTP_STALLING|DLNA_FLAG_TM_B;
 		char *alt_title = NULL;
+		char *prep_title = NULL;
+		/* Prepend disc and track to title */
+		if( GETFLAG(PREPEND_TRACK_MASK) && NON_ZERO(track) )
+		{
+			unsigned int track_no;
+			track_no = strtoul(track, NULL, 0);
+			if( GETFLAG(PREPEND_DISC_MASK) && NON_ZERO(disc) ) 
+			{
+				unsigned int disc_no;
+				disc_no = strtoul(disc, NULL, 0);
+				ret = asprintf(&prep_title, "%ux%02u. %s", disc_no, track_no, title);
+			}
+			else
+				ret = asprintf(&prep_title, "%02u. %s", track_no, title);
+
+			if( ret > 0 )
+				title = prep_title;
+			else
+				prep_title = NULL;
+		}
 		/* We may need special handling for certain MIME types */
 		if( *mime == 'v' )
 		{
@@ -1852,7 +1872,7 @@ QueryStateVariable(struct upnphttp * h, const char * action)
 		SoapError(h, 402, "Invalid Args");
 	}
 	else if(strcmp(var_name, "ConnectionStatus") == 0)
-	{	
+	{
 		int bodylen;
 		bodylen = snprintf(body, sizeof(body), resp,
                            action, "urn:schemas-upnp-org:control-1-0",
@@ -1865,7 +1885,7 @@ QueryStateVariable(struct upnphttp * h, const char * action)
 		SoapError(h, 404, "Invalid Var");
 	}
 
-	ClearNameValueList(&data);	
+	ClearNameValueList(&data);
 }
 
 static void
@@ -1945,12 +1965,12 @@ SamsungSetBookmark(struct upnphttp * h, const char * action)
 	else
 		SoapError(h, 402, "Invalid Args");
 
-	ClearNameValueList(&data);	
+	ClearNameValueList(&data);
 }
 
-static const struct 
+static const struct
 {
-	const char * methodName; 
+	const char * methodName;
 	void (*methodImpl)(struct upnphttp *, const char *);
 }
 soapMethods[] =
@@ -2007,4 +2027,3 @@ ExecuteSoapAction(struct upnphttp * h, const char * action, int n)
 
 	SoapError(h, 401, "Invalid Action");
 }
-

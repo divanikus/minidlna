@@ -786,6 +786,14 @@ init(int argc, char **argv)
 			if (!strtobool(ary_options[i].value))
 				SETFLAG(NO_COVER_RESIZE_MASK);
 			break;
+		case PREPEND_TRACK_NUMBER:
+			if (strtobool(ary_options[i].value))
+				SETFLAG(PREPEND_TRACK_MASK);
+			break;
+		case PREPEND_DISC_NUMBER:
+			if (strtobool(ary_options[i].value))
+				SETFLAG(PREPEND_DISC_MASK);
+			break;
 		case ROOT_CONTAINER:
 			switch (ary_options[i].value[0]) {
 			case '.':

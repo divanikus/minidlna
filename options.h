@@ -59,7 +59,9 @@ enum upnpconfigoptions {
 	MAX_CONNECTIONS,		/* maximum number of simultaneous connections */
 	MERGE_MEDIA_DIRS,		/* don't add an extra directory level when there are multiple media dirs */
 	WIDE_LINKS,			/* allow following symlinks outside the defined media_dirs */
-	RESIZE_COVER_ART		/* resize cover art to comply with DLNA spec */
+	RESIZE_COVER_ART,		/* resize cover art to comply with DLNA spec */
+	PREPEND_TRACK_NUMBER,		/* prepend disc and track numbers */
+	PREPEND_DISC_NUMBER		/* to fix sorting on Samsung devices */
 };
 
 /* readoptionsfile()
@@ -68,7 +70,7 @@ enum upnpconfigoptions {
 int
 readoptionsfile(const char * fname);
 
-/* freeoptions() 
+/* freeoptions()
  * frees memory allocated to option values */
 void
 freeoptions(void);
@@ -84,4 +86,3 @@ extern struct option * ary_options;
 extern int num_options;
 
 #endif
-

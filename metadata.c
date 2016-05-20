@@ -187,8 +187,11 @@ parse_nfo(const char *path, metadata_t *m)
 	if( !nfo )
 		return;
 	nread = fread(&buf, 1, sizeof(buf), nfo);
-	
+
 	ParseNameValue(buf, nread, &xml, 0);
+
+	m->track = UINT_MAX;
+	m->disc  = UINT_MAX;
 
 	//printf("\ttype: %s\n", GetValueFromNameValueList(&xml, "rootElement"));
 	val = GetValueFromNameValueList(&xml, "title");
@@ -204,6 +207,28 @@ parse_nfo(const char *path, metadata_t *m)
 		m->title = escape_tag(esc_tag, 1);
 		free(esc_tag);
 		free(title);
+	}
+
+	val = GetValueFromNameValueList(&xml, "episode");
+	if( val ) {
+		unsigned long ep;
+		char *esc_tag = unescape_tag(val, 1);
+		ep = strtoul(esc_tag, NULL, 0);
+		if (ep != 0 && ep < UINT_MAX) {
+			m->track = ep;
+		}
+		free(esc_tag);
+	}
+
+	val = GetValueFromNameValueList(&xml, "season");
+	if( val ) {
+		unsigned long season;
+		char *esc_tag = unescape_tag(val, 1);
+		season = strtoul(esc_tag, NULL, 0);
+		if (season != 0 && season < UINT_MAX) {
+			m->disc = season;
+		}
+		free(esc_tag);
 	}
 
 	val = GetValueFromNameValueList(&xml, "plot");
@@ -683,6 +708,7 @@ GetVideoMetadata(const char *path, char *name)
 	metadata_t m;
 	uint32_t free_flags = 0xFFFFFFFF;
 	char *path_cpy, *basepath;
+	char *disc, *track;
 
 	memset(&m, '\0', sizeof(m));
 	memset(&video, '\0', sizeof(video));
@@ -1551,15 +1577,27 @@ video_no_dlna:
 	freetags(&video);
 	lav_close(ctx);
 
+	disc  = malloc(12);
+	track = malloc(12);
+	if( m.disc > 0 && m.disc < UINT_MAX )
+		xasprintf(&disc, "%u", m.disc);
+	else
+		xasprintf(&disc, "NULL");
+
+	if( m.track > 0 && m.track < UINT_MAX )
+		xasprintf(&track, "%u", m.track);
+	else
+		xasprintf(&track, "NULL");
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
-	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART) "
+	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART, DISC, TRACK) "
 	                   "VALUES"
-	                   " (%Q, %lld, %lld, %Q, %Q, %u, %u, %u, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld);",
+	                   " (%Q, %lld, %lld, %Q, %Q, %u, %u, %u, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld, %s, %s);",
 	                   path, (long long)file.st_size, (long long)file.st_mtime, m.duration,
 	                   m.date, m.channels, m.bitrate, m.frequency, m.resolution,
 			   m.title, m.creator, m.artist, m.genre, m.comment, m.dlna_pn,
-                           m.mime, album_art);
+                           m.mime, album_art, disc, track);
 	if( ret != SQLITE_OK )
 	{
 		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);
@@ -1572,6 +1610,8 @@ video_no_dlna:
 	}
 	free_metadata(&m, free_flags);
 	free(path_cpy);
+	free(disc);
+	free(track);
 
 	return ret;
 }

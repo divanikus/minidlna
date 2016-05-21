@@ -621,6 +621,7 @@ init(int argc, char **argv)
 	runtime_vars.max_connections = 50;
 	runtime_vars.root_container = NULL;
 	runtime_vars.ifaces[0] = NULL;
+	runtime_vars.cover_size = 160; /* DLNA standart value */
 
 	/* read options file first since
 	 * command line arguments have final say */
@@ -783,8 +784,7 @@ init(int argc, char **argv)
 				SETFLAG(DLNA_STRICT_MASK);
 			break;
 		case RESIZE_COVER_ART:
-			if (!strtobool(ary_options[i].value))
-				SETFLAG(NO_COVER_RESIZE_MASK);
+			runtime_vars.cover_size = atoi(ary_options[i].value);
 			break;
 		case PREPEND_TRACK_NUMBER:
 			if (strtobool(ary_options[i].value))

@@ -67,18 +67,18 @@ save_resized_album_art(image_s *imsrc, const char *path)
 	strncpyt(cache_dir, cache_file, sizeof(cache_dir));
 	make_dir(dirname(cache_dir), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
 
-	if( GETFLAG(NO_COVER_RESIZE_MASK) )
+	if( runtime_vars.cover_size <= 0 )
 		return image_save_to_jpeg_file(imsrc, cache_file);
 
 	if( imsrc->width > imsrc->height )
 	{
-		dstw = 160;
-		dsth = (imsrc->height<<8) / ((imsrc->width<<8)/160);
+		dstw = runtime_vars.cover_size;
+		dsth = (imsrc->height<<8) / ((imsrc->width<<8) / runtime_vars.cover_size);
 	}
 	else
 	{
-		dstw = (imsrc->width<<8) / ((imsrc->height<<8)/160);
-		dsth = 160;
+		dstw = (imsrc->width<<8) / ((imsrc->height<<8) / runtime_vars.cover_size);
+		dsth = runtime_vars.cover_size;
 	}
 	imdst = image_resize(imsrc, dstw, dsth);
 	if( !imdst )
@@ -89,7 +89,7 @@ save_resized_album_art(image_s *imsrc, const char *path)
 
 	cache_file = image_save_to_jpeg_file(imdst, cache_file);
 	image_free(imdst);
-	
+
 	return cache_file;
 }
 

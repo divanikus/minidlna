@@ -192,9 +192,8 @@ extern uint32_t runtime_flags;
 #define SYSTEMD_MASK          0x0010
 #define MERGE_MEDIA_DIRS_MASK 0x0020
 #define WIDE_LINKS_MASK       0x0040
-#define NO_COVER_RESIZE_MASK  0x0080
-#define PREPEND_TRACK_MASK    0x0100
-#define PREPEND_DISC_MASK     0x0200
+#define PREPEND_TRACK_MASK    0x0080
+#define PREPEND_DISC_MASK     0x0100
 
 #define SETFLAG(mask)	runtime_flags |= mask
 #define GETFLAG(mask)	(runtime_flags & mask)

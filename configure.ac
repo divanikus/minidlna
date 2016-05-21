@@ -655,9 +655,12 @@ case "$target_os" in
         cygwin*)
                 OS_URL=http://www.cygwin.com/
                 AC_DEFINE(HAVE_INOTIFY, [1], [support inotify equivalent function on Cygwin])
-				if test "$target_cpu" != "x86_64"; then
-					LIBS="$LIBS -lws2_32 -liphlpapi"
-				fi
+		LIBS="$LIBS -liphlpapi"
+		if test "$target_cpu" != "x86_64"; then
+                        LIBS="$LIBS -lws2_32 -liphlpapi"
+                else
+		        LIBS="$LIBS -liphlpapi"
+		fi
 		;;
         *)
                 echo "Unknown OS : $target_os"

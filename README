@@ -1,4 +1,10 @@
-My personal fork including cygwin build support and several other patches
+My personal fork with the following patches:
+- Cygwin port
+- No cover resize option
+- Prepend title with disc and track numbers options
+- Read mkv metadata
+- Read SSA and ASS subtitles
+
 ==================
 MiniDLNA project
 (c) 2009 Justin Maggard

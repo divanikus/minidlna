@@ -216,7 +216,8 @@ check_embedded_art(const char *path, uint8_t *image_data, int image_size)
 	width = imsrc->width;
 	height = imsrc->height;
 
-	if( width > 160 || height > 160 )
+	if( runtime_vars.cover_size > 0 &&
+		( width > runtime_vars.cover_size || height > runtime_vars.cover_size ) )
 	{
 		art_path = save_resized_album_art(imsrc, path);
 	}
@@ -337,7 +338,8 @@ existing_file:
 found_file:
 			width = imsrc->width;
 			height = imsrc->height;
-			if( width > 160 || height > 160 )
+			if( runtime_vars.cover_size > 0 && 
+				( width > runtime_vars.cover_size || height > runtime_vars.cover_size ) )
 				art_file = save_resized_album_art(imsrc, file);
 			else
 				art_file = strdup(file);

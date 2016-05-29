@@ -337,8 +337,10 @@ delete_db_cygwin(char *db_path)
 	return;
 }
 
+#ifdef WIN_PROFILE_SUPPORT
 static char optionsfile_cygwin[PATH_MAX] = {'\0'};
 static char pidfilename_cygwin[PATH_MAX] = {'\0'};
+#endif // WIN_PROFILE_SUPPORT
 
 static char *
 realpath_conv_path(char *path, char *resolved_path)
@@ -578,10 +580,10 @@ init(int argc, char **argv)
 	int options_flag = 0;
 	struct sigaction sa;
 	const char * presurl = NULL;
-#ifndef __CYGWIN__
-	const char * optionsfile = "/etc/minidlna.conf";
-#else // __CYGWIN__
+#if defined(__CYGWIN___) && defined(WIN_PROFILE_SUPPORT)
 	const char * optionsfile = optionsfile_cygwin;
+#else
+	const char * optionsfile = "/etc/minidlna.conf";
 #endif // __CYGWIN__
 	char mac_str[13];
 	char *string, *word;
@@ -1142,12 +1144,12 @@ main(int argc, char **argv)
 	for (i = 0; i < L_MAX; i++)
 		log_level[i] = E_WARN;
 
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) && defined(WIN_PROFILE_SUPPORT)
 	{
 		char *localappdata;
-		if ((localappdata = getenv("LOCALAPPDATA")) == NULL) // Windows7, Vista
+		if( (localappdata = getenv("LOCALAPPDATA")) == NULL ) // Windows7, Vista
 			 localappdata = getenv("APPDATA");				 // Windows XP
-		if (localappdata != NULL)
+		if( localappdata != NULL )
 		{
 			cygwin_conv_path (CCP_WIN_A_TO_POSIX | CCP_ABSOLUTE, localappdata, db_path, PATH_MAX);
 			strcat(db_path, "/minidlna");
